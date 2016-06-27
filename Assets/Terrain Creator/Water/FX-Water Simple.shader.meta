@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: 9dccc8e8f0da4494991c26ef59019551
+timeCreated: 1465571318
+licenseType: Free
+ShaderImporter:
+  defaultTextures:
+  - _ColorControl: {instanceID: 0}
+  - _ColorControlCube: {fileID: 8900000, guid: 98c330f39d11745ad0004adb8d76c639, type: 3}
+  - _BumpMap: {instanceID: 0}
+  - _MainTex: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
