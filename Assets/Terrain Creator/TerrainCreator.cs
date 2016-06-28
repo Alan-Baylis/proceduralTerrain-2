@@ -11,7 +11,6 @@ public class TerrainCreator : MonoBehaviour {
 	};
 
 	//Terrain logic and rendering related variables
-	private Mesh[] meshes;
 	private Mesh mesh;
 	private GameObject waterPlane;
 	private int currentResolution;
@@ -28,9 +27,6 @@ public class TerrainCreator : MonoBehaviour {
 	private Texture2D tempGrayTex;
 	private Texture2D tex;
 
-	public GameObject huGray;
-	public GameObject tempGray;
-	public GameObject biomesVisualizer;
 	public GameObject painterScript;
 	public GameObject hPainter;
 	public GameObject huPainter;
@@ -42,6 +38,26 @@ public class TerrainCreator : MonoBehaviour {
 	public Shader waterShader;
 	public int randomSeed = 0;
 	public bool fixSeed = false;
+
+	//Biomes
+	//1 - polar, 2 - tundra, 3 - boreal, 4 - cold desert
+	//5 - praire, 6 - temp. forest, 7 -warm desert
+	//8 - grassland, 9 - savana, 10 - trop forest, 11- trop rain forest
+	public GameObject biomes;
+	public GameObject biomesVisualizer;
+	public GameObject huGray;
+	public GameObject tempGray;
+	private Texture2D polarText;
+	private Texture2D tundraText;
+	private Texture2D borealText;
+	private Texture2D coldDesertText;
+	private Texture2D praireText;
+	private Texture2D tempForestText;
+	private Texture2D warmDesertText;
+	private Texture2D grasslandText;
+	private Texture2D savanaText;
+	private Texture2D tropForestText;
+	private Texture2D rainForestText;
 
 	public RenderTexture activeRT;
 	public int mode =0;
@@ -76,10 +92,6 @@ public class TerrainCreator : MonoBehaviour {
 
 	//Create the empty mesh
 	private void OnEnable () {
-		if (meshes == null) {
-			meshes = new Mesh[chunks];
-		}
-
 		if (mesh == null) {
 			mesh = new Mesh();
 			mesh.name = "My Terrain";
@@ -125,6 +137,29 @@ public class TerrainCreator : MonoBehaviour {
 			tPainter.GetComponentInChildren<MeshRenderer>().sharedMaterial.mainTexture = tempTex;
 			huGray.GetComponent<MeshRenderer>().sharedMaterial.mainTexture = huGrayTex;
 			tempGray.GetComponent<MeshRenderer>().sharedMaterial.mainTexture = tempGrayTex;
+
+			polarText = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			tundraText = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			borealText = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			coldDesertText = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			praireText  = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			tempForestText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			warmDesertText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			grasslandText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			savanaText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			tropForestText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			rainForestText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			biomes.GetComponentsInChildren<MeshRenderer> () [0].sharedMaterial.mainTexture = polarText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [1].sharedMaterial.mainTexture = tundraText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [2].sharedMaterial.mainTexture = borealText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [3].sharedMaterial.mainTexture = coldDesertText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [4].sharedMaterial.mainTexture = praireText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [5].sharedMaterial.mainTexture = tempForestText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [6].sharedMaterial.mainTexture = warmDesertText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [7].sharedMaterial.mainTexture = grasslandText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [8].sharedMaterial.mainTexture = savanaText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [9].sharedMaterial.mainTexture = tropForestText;
+			biomes.GetComponentsInChildren<MeshRenderer> () [10].sharedMaterial.mainTexture = rainForestText;
 		}
 			
 		Refresh();
@@ -177,7 +212,7 @@ public class TerrainCreator : MonoBehaviour {
 					huGrayTex.SetPixel (x, y,	new Color(huColor.grayscale, huColor.grayscale, huColor.grayscale));
 					tempGrayTex.SetPixel (x, y,	new Color(tempColor.grayscale, tempColor.grayscale, tempColor.grayscale));
 					huTex.SetPixel (x, y,	humidityColoring.Evaluate (sample + 0.5f));
-					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate (sample + 0.5f));
+					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate ((sample + 0.5f)*-1));
 					sample *= strength;
 
 				} else {
@@ -190,7 +225,7 @@ public class TerrainCreator : MonoBehaviour {
 					huGrayTex.SetPixel (x, y,	new Color(huColor.grayscale, huColor.grayscale, huColor.grayscale));
 					tempGrayTex.SetPixel (x, y,	new Color(tempColor.grayscale, tempColor.grayscale, tempColor.grayscale));
 					huTex.SetPixel (x, y,	humidityColoring.Evaluate (sample + 0.5f));
-					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate (sample + 0.5f));
+					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate ((sample + 0.5f)*-1));
 				
 				}
 
@@ -349,19 +384,34 @@ public class TerrainCreator : MonoBehaviour {
 
 		for (int x = 0, v = 0; x < tempText.width; x++){
 			for(int y = 0; y < tempText.height; y++, v++){
-				Color hu = huText.GetPixel(x,y);
-				Color temp = tempText.GetPixel(x,y);
+				Color hu = huGrayTex.GetPixel(x,y);
+				Color temp = tempGrayTex.GetPixel(x,y);
 				colors [v] = hu;
-				biomesTexture.SetPixel (x, y, hu);
+				int biome = getBiome (hu.r * 300, temp.r * 300);
+				paintSplatForBiome( biome ,x,y);
+//				biomesTexture.SetPixel (x, y, hu);
 			}
 		}
 
+		polarText.Apply ();
+		tundraText.Apply ();
+		borealText.Apply ();
+		coldDesertText.Apply ();
+		praireText.Apply ();
+		tempForestText.Apply ();
+		warmDesertText.Apply ();
+		grasslandText.Apply ();
+		savanaText.Apply ();
+		tropForestText.Apply ();
+		rainForestText.Apply ();
 		biomesTexture.Apply ();
 		biomesVisualizer.GetComponent<MeshRenderer> ().sharedMaterial.mainTexture = biomesTexture;
 		GetComponentInParent<MeshRenderer>().sharedMaterial.mainTexture = biomesTexture;
 	}
 
-	//1 - polar, 2 - tundra, 3 - boreal, 4 - cold desert, 5 - praire, 6 - temp. forest, 7 -warm desert, 8 - grassland, 9 - savana, 10 - trop forest, 11- trop rain forest
+	//1 - polar, 2 - tundra, 3 - boreal, 4 - cold desert
+	//5 - praire, 6 - temp. forest, 7 -warm desert
+	//8 - grassland, 9 - savana, 10 - trop forest, 11- trop rain forest
 	private int getBiome(float temperature, float humidity) {
 		if (temperature > 220) {
 			return 1;
@@ -392,45 +442,67 @@ public class TerrainCreator : MonoBehaviour {
 		}
 		return 1;
 	}
-//	public void FillTexture(int mode){
-//		
-//		Texture2D tex = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-//		tex.name = "Heightmap";
-//		tex.wrapMode = TextureWrapMode.Clamp;
-//		tex.filterMode = FilterMode.Trilinear;
-//		tex.anisoLevel = 9;
-//		hPainter.GetComponentInChildren<MeshRenderer>().material.mainTexture = tex;
-//
-//		Vector3 point00 = transform.TransformPoint(new Vector3(-0.5f,-0.5f));
-//		Vector3 point10 = transform.TransformPoint(new Vector3( 0.5f,-0.5f));
-//		Vector3 point01 = transform.TransformPoint(new Vector3(-0.5f, 0.5f));
-//		Vector3 point11 = transform.TransformPoint(new Vector3( 0.5f, 0.5f));
-//
-//		if (tex.width != resolution) {
-//			tex.Resize(resolution,resolution);
-//			print("Resizing Texture for mode " + mode);
-//		}
-//
-//		if (mode == 2) {
-//			print ("Generating default Heightmap");
-//			NoiseMethod method = Noise.noiseMethods [(int)type] [dimensions - 1];
-//			float stepSize = 1f / resolution;
-//			for (int y = 0; y < resolution; y++) {
-//				Vector3 point0 = Vector3.Lerp (point00, point01, (y + 0.5f) * stepSize);
-//				Vector3 point1 = Vector3.Lerp (point10, point11, (y + 0.5f) * stepSize);
-//				for (int x = 0; x < resolution; x++) {
-//					Vector3 point = Vector3.Lerp (point0, point1, (x + 0.5f) * stepSize);
-//					float sample = Noise.Sum(method, point, frequency, octaves, lacunarity, persistence);
-//					sample = type == NoiseMethodType.Value ? (sample - 0.5f) : (sample * 3f);
-//
-//					Color color = heightColoring.Evaluate (sample);
-//					tex.SetPixel (x, y,	new Color(color.r,color.g,color.b));
-//				}
-//			}
-//			tex.Apply ();
-//
-//		}
-//	}
+
+	//1 - polar, 2 - tundra, 3 - boreal, 4 - cold desert
+	//5 - praire, 6 - temp. forest, 7 -warm desert
+	//8 - grassland, 9 - savana, 10 - trop forest, 11- trop rain forest
+	private void paintSplatForBiome(int biome, int onXPos, int onYPos){
+		if (biome == 1) {
+			polarText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			polarText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 2) {
+			tundraText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			tundraText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 3) {
+			borealText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			borealText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 4) {
+			coldDesertText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			coldDesertText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 5) {
+			praireText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			praireText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 6) {
+			tempForestText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			tempForestText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 7) {
+			warmDesertText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			warmDesertText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 8) {
+			grasslandText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			grasslandText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 9) {
+			savanaText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			savanaText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 10) {
+			tropForestText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			tropForestText.SetPixel (onXPos, onYPos, Color.white);
+		}
+		if (biome == 11) {
+			rainForestText.SetPixel (onXPos, onYPos, Color.black);
+		} else {
+			rainForestText.SetPixel (onXPos, onYPos, Color.white);
+		}
+	}
 
 	IEnumerator SaveTextureToFile(Texture2D savedTexture){    
 		string fullPath=System.IO.Directory.GetCurrentDirectory()+"/Assets/Terrain Creator/Textures/";
