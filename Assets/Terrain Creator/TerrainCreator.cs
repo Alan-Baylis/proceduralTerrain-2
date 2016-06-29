@@ -138,28 +138,17 @@ public class TerrainCreator : MonoBehaviour {
 			huGray.GetComponent<MeshRenderer>().sharedMaterial.mainTexture = huGrayTex;
 			tempGray.GetComponent<MeshRenderer>().sharedMaterial.mainTexture = tempGrayTex;
 
-			polarText = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			tundraText = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			borealText = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			coldDesertText = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			praireText  = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			tempForestText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			warmDesertText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			grasslandText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			savanaText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			tropForestText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			rainForestText   = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			biomes.GetComponentsInChildren<MeshRenderer> () [0].sharedMaterial.mainTexture = polarText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [1].sharedMaterial.mainTexture = tundraText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [2].sharedMaterial.mainTexture = borealText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [3].sharedMaterial.mainTexture = coldDesertText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [4].sharedMaterial.mainTexture = praireText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [5].sharedMaterial.mainTexture = tempForestText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [6].sharedMaterial.mainTexture = warmDesertText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [7].sharedMaterial.mainTexture = grasslandText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [8].sharedMaterial.mainTexture = savanaText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [9].sharedMaterial.mainTexture = tropForestText;
-			biomes.GetComponentsInChildren<MeshRenderer> () [10].sharedMaterial.mainTexture = rainForestText;
+			polarText = biomes.GetComponentsInChildren<MeshRenderer> () [0].sharedMaterial.mainTexture as Texture2D;
+			tundraText = biomes.GetComponentsInChildren<MeshRenderer> () [1].sharedMaterial.mainTexture as Texture2D;
+			borealText = biomes.GetComponentsInChildren<MeshRenderer> () [2].sharedMaterial.mainTexture as Texture2D;
+			coldDesertText = biomes.GetComponentsInChildren<MeshRenderer> () [3].sharedMaterial.mainTexture as Texture2D;
+			praireText  = biomes.GetComponentsInChildren<MeshRenderer> () [4].sharedMaterial.mainTexture as Texture2D;
+			tempForestText   = biomes.GetComponentsInChildren<MeshRenderer> () [5].sharedMaterial.mainTexture as Texture2D;
+			warmDesertText   = biomes.GetComponentsInChildren<MeshRenderer> () [6].sharedMaterial.mainTexture as Texture2D;
+			grasslandText   = biomes.GetComponentsInChildren<MeshRenderer> () [7].sharedMaterial.mainTexture as Texture2D;
+			savanaText   = biomes.GetComponentsInChildren<MeshRenderer> () [8].sharedMaterial.mainTexture as Texture2D;
+			tropForestText   = biomes.GetComponentsInChildren<MeshRenderer> () [9].sharedMaterial.mainTexture as Texture2D;
+			rainForestText   = biomes.GetComponentsInChildren<MeshRenderer> () [10].sharedMaterial.mainTexture as Texture2D;
 		}
 			
 		Refresh();
@@ -361,17 +350,20 @@ public class TerrainCreator : MonoBehaviour {
 		col.convex = false;
 	}
 
+	public void updateHeight(){
+		for (int v = 0, y = 0; y <= resolution; y++) {
+			for (int x = 0; x <= resolution; x++, v++) {
+				float sample = Noise.Sum(method, point, frequency, octaves, lacunarity, persistence);
+				vertices [v].y = sample * chunkSize;
+			}
+		}
+	}
+
 	private void generateBiomes(Texture2D huText, Texture2D tempText){
 		//Load all textures
 		RenderTexture humidtyRT = huPainter.GetComponentsInChildren<Camera> ()[1].targetTexture;
 		RenderTexture temperatureRT = tPainter.GetComponentsInChildren<Camera> ()[1].targetTexture;
-
-		Texture2D biomesTexture = new Texture2D(huText.width, huText.height, TextureFormat.ARGB32, false);
-		biomesTexture.name = "Biomes";
-		biomesTexture.wrapMode = TextureWrapMode.Clamp;
-		biomesTexture.filterMode = FilterMode.Bilinear;
-
-
+	
 		RenderTexture.active = humidtyRT;
 		Texture2D humidityTexture = new Texture2D(1024, 1024, TextureFormat.ARGB32, false);   
 		humidityTexture.ReadPixels (new Rect (0, 0, 1024, 1024), 0, 0);
@@ -389,7 +381,6 @@ public class TerrainCreator : MonoBehaviour {
 				colors [v] = hu;
 				int biome = getBiome (hu.r * 300, temp.r * 300);
 				paintSplatForBiome( biome ,x,y);
-//				biomesTexture.SetPixel (x, y, hu);
 			}
 		}
 
@@ -404,9 +395,6 @@ public class TerrainCreator : MonoBehaviour {
 		savanaText.Apply ();
 		tropForestText.Apply ();
 		rainForestText.Apply ();
-		biomesTexture.Apply ();
-		biomesVisualizer.GetComponent<MeshRenderer> ().sharedMaterial.mainTexture = biomesTexture;
-		GetComponentInParent<MeshRenderer>().sharedMaterial.mainTexture = biomesTexture;
 	}
 
 	//1 - polar, 2 - tundra, 3 - boreal, 4 - cold desert
@@ -440,67 +428,78 @@ public class TerrainCreator : MonoBehaviour {
 				return 7;
 			}
 		}
-		return 1;
 	}
 
 	//1 - polar, 2 - tundra, 3 - boreal, 4 - cold desert
 	//5 - praire, 6 - temp. forest, 7 -warm desert
 	//8 - grassland, 9 - savana, 10 - trop forest, 11- trop rain forest
 	private void paintSplatForBiome(int biome, int onXPos, int onYPos){
+		Color color;
+		color = polarText.GetPixel (onXPos, onYPos);
 		if (biome == 1) {
-			polarText.SetPixel (onXPos, onYPos, Color.black);
+			polarText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			polarText.SetPixel (onXPos, onYPos, Color.white);
+			polarText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = tundraText.GetPixel (onXPos, onYPos);
 		if (biome == 2) {
-			tundraText.SetPixel (onXPos, onYPos, Color.black);
+			tundraText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			tundraText.SetPixel (onXPos, onYPos, Color.white);
+			tundraText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = borealText.GetPixel (onXPos, onYPos);
 		if (biome == 3) {
-			borealText.SetPixel (onXPos, onYPos, Color.black);
+			borealText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			borealText.SetPixel (onXPos, onYPos, Color.white);
+			borealText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = coldDesertText.GetPixel (onXPos, onYPos);
 		if (biome == 4) {
-			coldDesertText.SetPixel (onXPos, onYPos, Color.black);
+			coldDesertText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			coldDesertText.SetPixel (onXPos, onYPos, Color.white);
+			coldDesertText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = praireText.GetPixel (onXPos, onYPos);
 		if (biome == 5) {
-			praireText.SetPixel (onXPos, onYPos, Color.black);
+			praireText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			praireText.SetPixel (onXPos, onYPos, Color.white);
+			praireText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = tempForestText.GetPixel (onXPos, onYPos);
 		if (biome == 6) {
-			tempForestText.SetPixel (onXPos, onYPos, Color.black);
+			tempForestText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			tempForestText.SetPixel (onXPos, onYPos, Color.white);
+			tempForestText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = warmDesertText.GetPixel (onXPos, onYPos);
 		if (biome == 7) {
-			warmDesertText.SetPixel (onXPos, onYPos, Color.black);
+			warmDesertText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			warmDesertText.SetPixel (onXPos, onYPos, Color.white);
+			warmDesertText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = grasslandText.GetPixel (onXPos, onYPos);
 		if (biome == 8) {
-			grasslandText.SetPixel (onXPos, onYPos, Color.black);
+			grasslandText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			grasslandText.SetPixel (onXPos, onYPos, Color.white);
+			grasslandText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = savanaText.GetPixel (onXPos, onYPos);
 		if (biome == 9) {
-			savanaText.SetPixel (onXPos, onYPos, Color.black);
+			savanaText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			savanaText.SetPixel (onXPos, onYPos, Color.white);
+			savanaText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = tropForestText.GetPixel (onXPos, onYPos);
 		if (biome == 10) {
-			tropForestText.SetPixel (onXPos, onYPos, Color.black);
+			tropForestText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			tropForestText.SetPixel (onXPos, onYPos, Color.white);
+			tropForestText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+		color = rainForestText.GetPixel (onXPos, onYPos);
 		if (biome == 11) {
-			rainForestText.SetPixel (onXPos, onYPos, Color.black);
+			rainForestText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,1f));
 		} else {
-			rainForestText.SetPixel (onXPos, onYPos, Color.white);
+			rainForestText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
 	}
 

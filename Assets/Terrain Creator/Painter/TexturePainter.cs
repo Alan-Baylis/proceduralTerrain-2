@@ -123,12 +123,14 @@ public class TexturePainter : MonoBehaviour {
 			brushObj.transform.localPosition=uvWorldPosition; //The position of the brush (in the UVMap)
 			brushObj.transform.localScale=Vector3.one*brushSize;//The size of the brush
 			brushObj.layer = 5;
+			Invoke("updateHeight");
 		}
 		brushCounter++; //Add to the max brushes
 		if (brushCounter >= MAX_BRUSH_COUNT) { //If we reach the max brushes available, flatten the texture and clear the brushes
 			//this.currentBrushCursor.SetActive (false);
 			saving=true;
 			Invoke("SaveTexture",0.1f);
+
 
 		}
 	}
@@ -186,6 +188,10 @@ public class TexturePainter : MonoBehaviour {
 		}
 		StartCoroutine (SaveTextureToFile(tex));
 		Invoke ("ShowCursor", 0.1f);
+	}
+
+	void updateHeight(){
+		terrainObject.GetComponent<TerrainCreator> ().updateHeight();
 	}
 
 	//Show again the user cursor (To avoid saving it to the texture)
