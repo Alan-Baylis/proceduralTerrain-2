@@ -44,7 +44,7 @@ public class TerrainCreator : MonoBehaviour {
 	//5 - praire, 6 - temp. forest, 7 -warm desert
 	//8 - grassland, 9 - savana, 10 - trop forest, 11- trop rain forest
 	public GameObject biomes;
-	public GameObject biomesVisualizer;
+	public Camera BiomesCamera;
 	public GameObject huGray;
 	public GameObject tempGray;
 	private Texture2D polarText;
@@ -139,16 +139,27 @@ public class TerrainCreator : MonoBehaviour {
 			tempGray.GetComponent<MeshRenderer>().sharedMaterial.mainTexture = tempGrayTex;
 
 			polarText = biomes.GetComponentsInChildren<MeshRenderer> () [0].sharedMaterial.mainTexture as Texture2D;
+			polarText.wrapMode = TextureWrapMode.Clamp;
 			tundraText = biomes.GetComponentsInChildren<MeshRenderer> () [1].sharedMaterial.mainTexture as Texture2D;
+			tundraText.wrapMode = TextureWrapMode.Clamp;
 			borealText = biomes.GetComponentsInChildren<MeshRenderer> () [2].sharedMaterial.mainTexture as Texture2D;
+			borealText.wrapMode = TextureWrapMode.Clamp;
 			coldDesertText = biomes.GetComponentsInChildren<MeshRenderer> () [3].sharedMaterial.mainTexture as Texture2D;
+			coldDesertText.wrapMode = TextureWrapMode.Clamp;
 			praireText  = biomes.GetComponentsInChildren<MeshRenderer> () [4].sharedMaterial.mainTexture as Texture2D;
+			praireText.wrapMode = TextureWrapMode.Clamp;
 			tempForestText   = biomes.GetComponentsInChildren<MeshRenderer> () [5].sharedMaterial.mainTexture as Texture2D;
+			tempForestText.wrapMode = TextureWrapMode.Clamp;
 			warmDesertText   = biomes.GetComponentsInChildren<MeshRenderer> () [6].sharedMaterial.mainTexture as Texture2D;
+			warmDesertText.wrapMode = TextureWrapMode.Clamp;
 			grasslandText   = biomes.GetComponentsInChildren<MeshRenderer> () [7].sharedMaterial.mainTexture as Texture2D;
+			grasslandText.wrapMode = TextureWrapMode.Clamp;
 			savanaText   = biomes.GetComponentsInChildren<MeshRenderer> () [8].sharedMaterial.mainTexture as Texture2D;
+			savanaText.wrapMode = TextureWrapMode.Clamp;
 			tropForestText   = biomes.GetComponentsInChildren<MeshRenderer> () [9].sharedMaterial.mainTexture as Texture2D;
+			tropForestText.wrapMode = TextureWrapMode.Clamp;
 			rainForestText   = biomes.GetComponentsInChildren<MeshRenderer> () [10].sharedMaterial.mainTexture as Texture2D;
+			rainForestText.wrapMode = TextureWrapMode.Clamp;
 		}
 			
 		Refresh();
@@ -160,9 +171,8 @@ public class TerrainCreator : MonoBehaviour {
 			CreateGrid();
 		}
 
-		if (tex.width != resolution || huTex.width != resolution || tempTex.width != resolution) {
-			tex.Resize(resolution,resolution);
-			print("Resizing Texture for mode " + mode);
+		if (tex.width != resolution || huTex.width != resolution || tempTex.width != resolution || huGrayTex.width != resolution || tempGrayTex.width != resolution) {
+			resizeTextures ();
 			print("Resizing Height, Humidity and Temperature Maps");
 		}
 			
@@ -201,7 +211,7 @@ public class TerrainCreator : MonoBehaviour {
 					huGrayTex.SetPixel (x, y,	new Color(huColor.grayscale, huColor.grayscale, huColor.grayscale));
 					tempGrayTex.SetPixel (x, y,	new Color(tempColor.grayscale, tempColor.grayscale, tempColor.grayscale));
 					huTex.SetPixel (x, y,	humidityColoring.Evaluate (sample + 0.5f));
-					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate ((sample + 0.5f)*-1));
+					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate (1-(sample + 0.5f)));
 					sample *= strength;
 
 				} else {
@@ -214,7 +224,7 @@ public class TerrainCreator : MonoBehaviour {
 					huGrayTex.SetPixel (x, y,	new Color(huColor.grayscale, huColor.grayscale, huColor.grayscale));
 					tempGrayTex.SetPixel (x, y,	new Color(tempColor.grayscale, tempColor.grayscale, tempColor.grayscale));
 					huTex.SetPixel (x, y,	humidityColoring.Evaluate (sample + 0.5f));
-					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate ((sample + 0.5f)*-1));
+					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate (1-(sample + 0.5f)));
 				
 				}
 
@@ -243,8 +253,6 @@ public class TerrainCreator : MonoBehaviour {
 
 	public void randomHumidityTemperature(){
 		painterScript.GetComponentInChildren<TexturePainter> ().clearCanvasBrushes ();
-		Texture2D huTex = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-		Texture2D tempTex = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
 		huTex.name = "HumidityMap";
 		tempTex.name = "TemperatureText";
 		huTex.wrapMode = TextureWrapMode.Clamp;
@@ -353,10 +361,12 @@ public class TerrainCreator : MonoBehaviour {
 	public void updateHeight(){
 		for (int v = 0, y = 0; y <= resolution; y++) {
 			for (int x = 0; x <= resolution; x++, v++) {
-				float sample = Noise.Sum(method, point, frequency, octaves, lacunarity, persistence);
+				float sample = tex.GetPixel(x,y).r;
 				vertices [v].y = sample * chunkSize;
 			}
 		}
+		mesh.vertices = vertices;
+		mesh.RecalculateNormals();
 	}
 
 	private void generateBiomes(Texture2D huText, Texture2D tempText){
@@ -501,6 +511,29 @@ public class TerrainCreator : MonoBehaviour {
 		} else {
 			rainForestText.SetPixel (onXPos, onYPos, new Color(color.r,color.g,color.b,0f));
 		}
+	}
+
+	private void resizeTextures(){
+		tex.Resize(resolution,resolution);
+		huTex.Resize (resolution, resolution);
+		tempTex.Resize (resolution, resolution);
+		tempGrayTex.Resize (resolution, resolution);
+		huGrayTex.Resize (resolution, resolution);
+		float size = resolution / 508.0f;
+		BiomesCamera.orthographicSize = size;
+		Vector3 newCameraLocalPos = new Vector3 (-0.5f + size, -0.5f + size, -3.27f);
+		BiomesCamera.transform.localPosition = newCameraLocalPos;
+//		polarText.Resize(resolution, resolution);
+//		tundraText.Resize (resolution, resolution);
+//		borealText.Resize (resolution, resolution);
+//		coldDesertText.Resize (resolution, resolution);
+//		praireText.Resize (resolution, resolution);
+//		tempForestText.Resize (resolution, resolution);
+//		warmDesertText.Resize (resolution, resolution);
+//		grasslandText.Resize (resolution, resolution);
+//		savanaText.Resize (resolution, resolution);
+//		tropForestText.Resize (resolution, resolution);
+//		rainForestText.Resize (resolution, resolution);
 	}
 
 	IEnumerator SaveTextureToFile(Texture2D savedTexture){    
