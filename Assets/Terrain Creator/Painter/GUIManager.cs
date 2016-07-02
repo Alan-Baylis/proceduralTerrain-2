@@ -4,6 +4,7 @@ using UnityEngine.UI;
 public class GUIManager : MonoBehaviour {
 	public Text guiTextMode;
 	public Slider sizeSlider;
+	public Slider colorSlider;
 	public TexturePainter painter;
 	public Button[] modes;
 
@@ -20,7 +21,11 @@ public class GUIManager : MonoBehaviour {
 	}
 
 	public void UpdateSizeSlider(){
-		painter.SetBrushSize (sizeSlider.value * 10);
+		painter.SetBrushSize (sizeSlider.value * 10f);
+	}
+
+	public void UpdateIntensitySlider(){
+		painter.SetBrushColor(colorSlider.value);
 	}
 
 	public void VisualizeTerrain(){

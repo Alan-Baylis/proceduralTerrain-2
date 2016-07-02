@@ -50,10 +50,12 @@ public class TexturePainter : MonoBehaviour {
 	private Material currentMaterial;
 	private Material currentCanvasMaterial;
 	private GameObject currentBrushCursor, currentBrushContainer;
+	public Slider sizeSlider;
+	public Slider colorSlider;
 
 	Painter_BrushMode mode; //Our painter mode (Paint brushes or decals)
 	float brushSize=1.0f; //The size of our brush
-	Color brushColor; //The selected color
+	Color brushColor = new Color(0.5f,0.5f,0.5f); //The selected color
 	int brushCounter=0,MAX_BRUSH_COUNT=100; //To avoid having millions of brushes
 	bool saving=false; //Flag to check if we are saving the texture
 
@@ -61,6 +63,7 @@ public class TexturePainter : MonoBehaviour {
 	    this.visualizationMode = mode;
 		if (mode == 0) {
 			terrainObject.GetComponent<MeshRenderer> ().material = defaultTerrainMaterial;
+			generateBiomes ();
 		} else if (mode == 1) {
 			print ("Entering Humidity Painter Mode");
 			terrainObject.GetComponent<MeshRenderer> ().material = humidtyPainterMaterial;
@@ -101,7 +104,7 @@ public class TexturePainter : MonoBehaviour {
 
 	void Update () {
 	    if (visualizationMode != 0) {
-	      brushColor = ColorSelector.GetColor (); //Updates our painted color with the selected color
+	      //brushColor = ColorSelector.GetColor (); //Updates our painted color with the selected color
 	      if (Input.GetMouseButton(0)) {
 	        DoAction();
 	      }
@@ -123,15 +126,15 @@ public class TexturePainter : MonoBehaviour {
 			brushObj.transform.localPosition=uvWorldPosition; //The position of the brush (in the UVMap)
 			brushObj.transform.localScale=Vector3.one*brushSize;//The size of the brush
 			brushObj.layer = 5;
-			//Invoke("updateHeight", 0.1f);
+			if (visualizationMode == 2) {
+				Invoke ("updateHeight", 0.1f);
+			}
 		}
 		brushCounter++; //Add to the max brushes
 		if (brushCounter >= MAX_BRUSH_COUNT) { //If we reach the max brushes available, flatten the texture and clear the brushes
 			//this.currentBrushCursor.SetActive (false);
 			saving=true;
 			Invoke("SaveTexture",0.1f);
-
-
 		}
 	}
 	//To update at realtime the painting cursor on the mesh
@@ -181,17 +184,25 @@ public class TexturePainter : MonoBehaviour {
 		tex.ReadPixels (new Rect (0, 0, this.currentSaveRT.width, this.currentSaveRT.height), 0, 0);
 		tex.Apply ();
 		this.currentCanvasMaterial.mainTexture = tex;
-		print (currentCanvasMaterial.mainTexture);
 
 		foreach (Transform child in this.currentBrushContainer.transform) {//Clear brushes
 			Destroy(child.gameObject);
 		}
-		StartCoroutine (SaveTextureToFile(tex));
+//		StartCoroutine (SaveTextureToFile(tex));
 		Invoke ("ShowCursor", 0.1f);
+		Invoke("generateBiomes", 0.1f);
 	}
 
 	void updateHeight(){
-		//terrainObject.GetComponentInChildren<TerrainCreator> ().updateHeight();
+		if (visualizationMode == 2) {
+			terrainObject.GetComponentInChildren<TerrainCreator> ().updateHeight();
+		}
+	}
+
+	void generateBiomes(){
+		if (visualizationMode == 1 || visualizationMode == 3) {
+			terrainObject.GetComponentInChildren<TerrainCreator> ().updateGrayscales();
+		}
 	}
 
 	//Show again the user cursor (To avoid saving it to the texture)
@@ -202,6 +213,20 @@ public class TexturePainter : MonoBehaviour {
 	public void SetBrushSize(float newBrushSize){ //Sets the size of the cursor brush or decal
 		brushSize = newBrushSize;
 		this.currentBrushCursor.transform.localScale = Vector3.one * brushSize;
+	}
+
+	public void SetBrushColor(float newBrushIntensity){ //Sets the size of the cursor brush or decal
+		TerrainCreator script = terrainObject.GetComponentInChildren<TerrainCreator> ();
+		if (visualizationMode == 1) {
+			brushColor = script.humidityColoring.Evaluate(newBrushIntensity);
+			//brushColor = new Color(newBrushIntensity, newBrushIntensity, newBrushIntensity);
+		} else if (visualizationMode == 3) {
+			brushColor = script.temperatureColoring.Evaluate( 1- newBrushIntensity);
+			//brushColor = new Color(newBrushIntensity, newBrushIntensity, newBrushIntensity);
+		} else {
+			brushColor = new Color(newBrushIntensity, newBrushIntensity, newBrushIntensity);
+		}
+
 	}
 
 	public void SaveTextureButtonPressed(){ //Saves Texture to assets folder
@@ -247,6 +272,10 @@ public class TexturePainter : MonoBehaviour {
 		foreach (Transform child in this.tbrushContainer.transform) {
 			Destroy(child.gameObject);
 		}
+	}
+
+	public void updateCursor(){
+		
 	}
 
 	public string modeToString(int mode){

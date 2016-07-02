@@ -27,6 +27,7 @@ public class TerrainCreator : MonoBehaviour {
 	private Texture2D tempGrayTex;
 	private Texture2D tex;
 
+	public GameObject grayscaler;
 	public GameObject painterScript;
 	public GameObject hPainter;
 	public GameObject huPainter;
@@ -107,11 +108,11 @@ public class TerrainCreator : MonoBehaviour {
 			//waterPlane.GetComponent<MeshCollider> ().enabled = false;
 
 			//Creating default Textures
-			huTex = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			huGrayTex = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			tempTex = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			tempGrayTex = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
-			tex = new Texture2D (resolution, resolution, TextureFormat.RGB24, true);
+			huTex = new Texture2D (resolution, resolution, TextureFormat.ARGB32, true);
+			huGrayTex = new Texture2D (resolution, resolution, TextureFormat.ARGB32, true);
+			tempTex = new Texture2D (resolution, resolution, TextureFormat.ARGB32, true);
+			tempGrayTex = new Texture2D (resolution, resolution, TextureFormat.ARGB32, true);
+			tex = new Texture2D (resolution, resolution, TextureFormat.ARGB32, true);
 			tex.name = "Heightmap";
 			huTex.name = "HumidityMap";
 			huGrayTex.name = "HumidityGrayscaleMap";
@@ -207,8 +208,8 @@ public class TerrainCreator : MonoBehaviour {
 					Color tempColor = temperatureColoring.Evaluate (sample + 0.5f);
 
 					colors[v] = coloring.Evaluate(sample + 0.5f);
-					tex.SetPixel (x, y,	heightColoring.Evaluate (sample + 0.5f));
-					huGrayTex.SetPixel (x, y,	new Color(huColor.grayscale, huColor.grayscale, huColor.grayscale));
+					tex.SetPixel (x, y,	new Color((sample + 0.5f),(sample + 0.5f),(sample + 0.5f)));
+					huGrayTex.SetPixel (x, y,	new Color(1f-huColor.grayscale, 1f-huColor.grayscale, 1f-huColor.grayscale));
 					tempGrayTex.SetPixel (x, y,	new Color(tempColor.grayscale, tempColor.grayscale, tempColor.grayscale));
 					huTex.SetPixel (x, y,	humidityColoring.Evaluate (sample + 0.5f));
 					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate (1-(sample + 0.5f)));
@@ -220,8 +221,8 @@ public class TerrainCreator : MonoBehaviour {
 					Color tempColor = temperatureColoring.Evaluate (sample + 0.5f);
 
 					colors[v] = coloring.Evaluate(sample + 0.5f);
-					tex.SetPixel (x, y,	heightColoring.Evaluate (sample + 0.5f));
-					huGrayTex.SetPixel (x, y,	new Color(huColor.grayscale, huColor.grayscale, huColor.grayscale));
+					tex.SetPixel (x, y,	new Color((sample + 0.5f),(sample + 0.5f),(sample + 0.5f)));
+					huGrayTex.SetPixel (x, y,	new Color(1f-huColor.grayscale, 1f-huColor.grayscale, 1f-huColor.grayscale));
 					tempGrayTex.SetPixel (x, y,	new Color(tempColor.grayscale, tempColor.grayscale, tempColor.grayscale));
 					huTex.SetPixel (x, y,	humidityColoring.Evaluate (sample + 0.5f));
 					tempTex.SetPixel (x, y,	temperatureColoring.Evaluate (1-(sample + 0.5f)));
@@ -242,7 +243,7 @@ public class TerrainCreator : MonoBehaviour {
 		StartCoroutine (SaveTextureToFile(tempTex));
 		mesh.vertices = vertices;
 		mesh.RecalculateNormals();
-		generateBiomes (huTex, tempTex);
+		generateBiomes ();
 		mesh.colors = colors;
 
 		//WaterPlane resizing and tiling
@@ -302,8 +303,8 @@ public class TerrainCreator : MonoBehaviour {
 				Color huColor = humidityColoring.Evaluate (sample + randomHuValue);
 				Color tempColor = temperatureColoring.Evaluate (sample + randomTempValue);
 
-				huGrayTex.SetPixel (x, y,	new Color(huColor.grayscale, huColor.grayscale, huColor.grayscale));
-				tempGrayTex.SetPixel (x, y,	new Color(tempColor.grayscale, tempColor.grayscale, tempColor.grayscale));
+				huGrayTex.SetPixel (x, y,	new Color(1f-huColor.grayscale, 1f-huColor.grayscale, 1f-huColor.grayscale));
+				tempGrayTex.SetPixel (x, y,	new Color(1f-tempColor.grayscale, 1f-tempColor.grayscale, 1f-tempColor.grayscale));
 				huTex.SetPixel (x, y,	humidityColoring.Evaluate (sample + randomHuValue));
 				tempTex.SetPixel (x, y,	temperatureColoring.Evaluate (sample + randomTempValue));
 			}
@@ -312,10 +313,11 @@ public class TerrainCreator : MonoBehaviour {
 		tempGrayTex.Apply();
 		huTex.Apply ();
 		tempTex.Apply ();
-		generateBiomes (huTex, tempTex);
+		generateBiomes ();
 	}
 
 	private void CreateGrid () {
+		resizeTextures ();
 		currentResolution = resolution;
 		currentSize = chunkSize;
 		mesh.Clear();
@@ -359,33 +361,137 @@ public class TerrainCreator : MonoBehaviour {
 	}
 
 	public void updateHeight(){
-		for (int v = 0, y = 0; y <= resolution; y++) {
-			for (int x = 0; x <= resolution; x++, v++) {
-				float sample = tex.GetPixel(x,y).r;
-				vertices [v].y = sample * chunkSize;
+		int localRes = resolution;
+		RenderTexture heightRt = hPainter.GetComponentsInChildren<Camera> ()[1].targetTexture;
+
+		if (heightRt.width != resolution) {
+			RenderTexture newResH = RenderTexture.GetTemporary (localRes, localRes);
+			RenderTexture.active = newResH;
+			Graphics.Blit (heightRt, newResH);
+			Texture2D nt = new Texture2D (localRes, localRes, TextureFormat.ARGB32, false);
+			nt.ReadPixels (new Rect (0, 0, localRes, localRes), 0, 0);
+			nt.Apply ();
+
+
+			for (int v = 0, y = 0; y <= resolution; y++) {
+				for (int x = 0; x <= resolution; x++, v++) {
+					float sample = nt.GetPixel(x,y).r;
+					vertices [v].y = (sample-0.5f) * chunkSize;
+				}
 			}
+
+			mesh.vertices = vertices;
+			mesh.RecalculateNormals();
+
+		} else {
+
+			RenderTexture.active = heightRt;
+			Texture2D hTexture = new Texture2D(localRes, localRes, TextureFormat.ARGB32, false);
+			hTexture.wrapMode = TextureWrapMode.Clamp;
+			hTexture.ReadPixels (new Rect (0, 0, localRes, localRes), 0, 0);
+			hTexture.Apply ();
+
+			for (int v = 0, y = 0; y <= resolution; y++) {
+				for (int x = 0; x <= resolution; x++, v++) {
+					float sample = hTexture.GetPixel(x,y).r;
+					vertices [v].y = (sample-0.5f) * chunkSize;
+				}
+			}
+
+			mesh.vertices = vertices;
+			mesh.RecalculateNormals();
 		}
-		mesh.vertices = vertices;
-		mesh.RecalculateNormals();
 	}
 
-	private void generateBiomes(Texture2D huText, Texture2D tempText){
+	public void updateGrayscales(){
+		int localRes = resolution;
+		RenderTexture humidtyRT = huPainter.GetComponentsInChildren<Camera> ()[1].targetTexture;
+		RenderTexture temperatureRT = tPainter.GetComponentsInChildren<Camera> ()[1].targetTexture;
+
+
+		if (humidtyRT.width != resolution) {
+			RenderTexture newResHuRt = RenderTexture.GetTemporary (localRes, localRes);
+			RenderTexture.active = newResHuRt;
+			Graphics.Blit (humidtyRT, newResHuRt);
+			Texture2D nt = new Texture2D (localRes, localRes, TextureFormat.ARGB32, false);
+			nt.ReadPixels (new Rect (0, 0, localRes, localRes), 0, 0);
+			nt.Apply ();
+
+			RenderTexture newResTemp = RenderTexture.GetTemporary (localRes, localRes);
+			RenderTexture.active = newResTemp;
+			Graphics.Blit (temperatureRT, newResTemp);
+			Texture2D nt2 = new Texture2D (localRes, localRes, TextureFormat.ARGB32, false);
+			nt2.ReadPixels (new Rect (0, 0, localRes, localRes), 0, 0);
+			nt2.Apply ();
+
+			huGrayTex = new Texture2D (localRes, localRes, TextureFormat.ARGB32, false);
+			tempGrayTex = new Texture2D (localRes, localRes, TextureFormat.ARGB32, false);
+			huGray.GetComponent<MeshRenderer> ().sharedMaterial.mainTexture = huGrayTex;
+			tempGray.GetComponent<MeshRenderer> ().sharedMaterial.mainTexture = tempGrayTex;
+
+			for (int x = 0, v = 0; x < localRes; x++) {
+				for (int y = 0; y < localRes; y++, v++) {
+					Color hu = nt.GetPixel (x, y);
+					Color temp = nt2.GetPixel (x, y);
+					huGrayTex.SetPixel (x, y,	new Color (1f - hu.grayscale, 1f - hu.grayscale, 1f - hu.grayscale));
+					tempGrayTex.SetPixel (x, y,	new Color (1f - temp.grayscale, 1f - temp.grayscale, 1f - temp.grayscale));
+				}
+			}
+
+			huGrayTex.Apply ();
+			tempGrayTex.Apply ();
+			Invoke ("generateBiomes", 0.1f);
+		} else {
+			
+			RenderTexture.active = humidtyRT;
+			Texture2D huTexture = new Texture2D(localRes, localRes, TextureFormat.ARGB32, false);
+			huTexture.wrapMode = TextureWrapMode.Clamp;
+			huTexture.ReadPixels (new Rect (0, 0, localRes, localRes), 0, 0);
+			huTexture.Apply ();
+
+			RenderTexture.active = temperatureRT;
+			Texture2D tempTexture = new Texture2D(localRes, localRes, TextureFormat.ARGB32, false);  
+			tempTexture.wrapMode = TextureWrapMode.Clamp;
+			tempTexture.ReadPixels (new Rect (0, 0, localRes, localRes), 0, 0);
+			tempTexture.Apply ();
+
+			huGrayTex = new Texture2D(localRes,localRes,TextureFormat.ARGB32, false);
+			tempGrayTex = new Texture2D(localRes,localRes,TextureFormat.ARGB32, false);
+			huGray.GetComponent<MeshRenderer>().sharedMaterial.mainTexture = huGrayTex;
+			tempGray.GetComponent<MeshRenderer>().sharedMaterial.mainTexture = tempGrayTex;
+
+			for (int x = 0, v = 0; x < localRes; x++){
+				for(int y = 0; y < localRes; y++, v++){
+					Color hu = huTexture.GetPixel(x,y);
+					Color temp = tempTexture.GetPixel(x,y);
+					huGrayTex.SetPixel (x, y,	new Color(1f-hu.grayscale, 1f-hu.grayscale, 1f-hu.grayscale));
+					tempGrayTex.SetPixel (x, y,	new Color(1f-temp.grayscale, 1f-temp.grayscale, 1f-temp.grayscale));
+				}
+			}
+
+			huGrayTex.Apply ();
+			tempGrayTex.Apply ();
+			Invoke ("generateBiomes", 0.1f);
+		}
+	}
+
+	public void generateBiomes(){
 		//Load all textures
 		RenderTexture humidtyRT = huPainter.GetComponentsInChildren<Camera> ()[1].targetTexture;
 		RenderTexture temperatureRT = tPainter.GetComponentsInChildren<Camera> ()[1].targetTexture;
 	
 		RenderTexture.active = humidtyRT;
-		Texture2D humidityTexture = new Texture2D(1024, 1024, TextureFormat.ARGB32, false);   
-		humidityTexture.ReadPixels (new Rect (0, 0, 1024, 1024), 0, 0);
+		Texture2D humidityTexture = new Texture2D(resolution, resolution, TextureFormat.ARGB32, false);   
+		humidityTexture.ReadPixels (new Rect (0, 0, resolution, resolution), 0, 0);
 		humidityTexture.Apply ();
 
 		RenderTexture.active = temperatureRT;
-		Texture2D temperatureTexture = new Texture2D(1024, 1024, TextureFormat.ARGB32, false);   
-		temperatureTexture.ReadPixels (new Rect (0, 0, 1024, 1024), 0, 0);
+		Texture2D temperatureTexture = new Texture2D(resolution, resolution, TextureFormat.ARGB32, false);   
+		temperatureTexture.ReadPixels (new Rect (0, 0, resolution, resolution), 0, 0);
 		temperatureTexture.Apply ();
 
-		for (int x = 0, v = 0; x < tempText.width; x++){
-			for(int y = 0; y < tempText.height; y++, v++){
+		for (int x = 0, v = 0; x < resolution; x++){
+			for(int y = 0; y < resolution; y++, v++){
 				Color hu = huGrayTex.GetPixel(x,y);
 				Color temp = tempGrayTex.GetPixel(x,y);
 				colors [v] = hu;
@@ -523,17 +629,6 @@ public class TerrainCreator : MonoBehaviour {
 		BiomesCamera.orthographicSize = size;
 		Vector3 newCameraLocalPos = new Vector3 (-0.5f + size, -0.5f + size, -3.27f);
 		BiomesCamera.transform.localPosition = newCameraLocalPos;
-//		polarText.Resize(resolution, resolution);
-//		tundraText.Resize (resolution, resolution);
-//		borealText.Resize (resolution, resolution);
-//		coldDesertText.Resize (resolution, resolution);
-//		praireText.Resize (resolution, resolution);
-//		tempForestText.Resize (resolution, resolution);
-//		warmDesertText.Resize (resolution, resolution);
-//		grasslandText.Resize (resolution, resolution);
-//		savanaText.Resize (resolution, resolution);
-//		tropForestText.Resize (resolution, resolution);
-//		rainForestText.Resize (resolution, resolution);
 	}
 
 	IEnumerator SaveTextureToFile(Texture2D savedTexture){    
